@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saling Tolong - Forum Komentar</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: black;
+            color: white;
+            line-height: 1.6;
+        }
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+        .container {
+            padding: 80px 20px 20px;
+        }
+        .content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            background-color: #333;
+            color: white;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #00ffcc;
+            color: black;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .comment {
+            background-color: #333;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .comment .author {
+            font-weight: bold;
+            color: #00ffcc;
+        }
+        .replies {
+            margin-left: 20px;
+            padding-left: 10px;
+            border-left: 2px solid #555;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h1>Saling Tolong - Forum Komentar</h1>
+    </nav>
+
+    <div class="container">
+        <div class="content">
+            <h2>Forum Komentar</h2>
+            <textarea id="commentInput" placeholder="Tulis komentar Anda di sini..." rows="4"></textarea>
+            <br>
+            <button id="submitComment">Kirim Komentar</button>
+            <div class="comment-section" id="commentSection"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
+        import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD5pDbvvA65DqRHIY4EA_4BAr1jsQffmpg",
+            authDomain: "wowo-48903.firebaseapp.com",
+            databaseURL: "https://wowo-48903-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "wowo-48903",
+            storageBucket: "wowo-48903.appspot.com",
+            messagingSenderId: "70786358791",
+            appId: "1:70786358791:web:9ca6a8c3d46ead330714a2",
+            measurementId: "G-80KRHNMWJQ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const commentRef = ref(database, "comments");
+
+        const addComment = (author, text, parentId = null) => {
+            push(commentRef, { author, text, parentId, timestamp: Date.now() });
+        };
+
+        const addCommentToDOM = (id, author, text, timestamp, parentId = null) => {
+            const commentSection = document.getElementById("commentSection");
+            const formattedTime = new Date(timestamp).toLocaleString("id-ID", {
+                weekday: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit"
+            });
+
+            const commentDiv = document.createElement("div");
+            commentDiv.className = "comment";
+            commentDiv.setAttribute("data-id", id);
+            commentDiv.innerHTML = `
+                <div class="author">${author} - ${formattedTime}</div>
+                <div class="text">${text}</div>
+                <button class="reply-btn">Balas</button>
+                <div class="replies"></div>
+            `;
+
+            if (parentId) {
+                const parentComment = document.querySelector(`[data-id='${parentId}'] .replies`);
+                parentComment.appendChild(commentDiv);
+            } else {
+                commentSection.appendChild(commentDiv);
+            }
+
+            const replyBtn = commentDiv.querySelector(".reply-btn");
+            replyBtn.addEventListener("click", () => {
+                const replyInput = document.createElement("textarea");
+                replyInput.placeholder = "Tulis balasan Anda...";
+                replyInput.rows = 2;
+                const sendReplyBtn = document.createElement("button");
+                sendReplyBtn.textContent = "Kirim Balasan";
+
+                commentDiv.appendChild(replyInput);
+                commentDiv.appendChild(sendReplyBtn);
+
+                sendReplyBtn.addEventListener("click", () => {
+                    const replyText = replyInput.value.trim();
+                    if (replyText) {
+                        addComment("Pengguna", replyText, id);
+                        replyInput.remove();
+                        sendReplyBtn.remove();
+                    }
+                });
+            });
+        };
+
+        document.getElementById("submitComment").addEventListener("click", () => {
+            const commentInput = document.getElementById("commentInput");
+            const text = commentInput.value.trim();
+            if (text) {
+                addComment("Pengguna", text);
+                commentInput.value = "";
+            }
+        });
+
+        onChildAdded(commentRef, (data) => {
+            const comment = data.val();
+            addCommentToDOM(data.key, comment.author, comment.text, comment.timestamp, comment.parentId);
+        });
+    </script>
+</body>
+</html>
